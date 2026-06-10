@@ -38,6 +38,8 @@ import { openAccountCloseModal } from '#modals/modalsSlice';
 import { useDispatch } from '#redux';
 import type { Binding, SheetFields } from '#spreadsheet';
 
+import { BankLogo } from './BankLogo';
+
 export const accountNameStyle: CSSProperties = {
   marginTop: -2,
   marginBottom: 2,
@@ -234,7 +236,17 @@ export function Account<FieldName extends SheetFields<'account'>>({
                     />
                   </InitialFocus>
                 ) : (
-                  name
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {account && !titleAccount && (
+                      <BankLogo account={account} size={14} />
+                    )}
+                    {name}
+                  </View>
                 )
               }
               right={
@@ -273,6 +285,18 @@ export function Account<FieldName extends SheetFields<'account'>>({
                       setIsEditing(true);
                       break;
                     }
+                    case 'set-type-credit': {
+                      updateAccount.mutate({
+                        account: { ...account, type: 'credit' },
+                      });
+                      break;
+                    }
+                    case 'set-type-bank': {
+                      updateAccount.mutate({
+                        account: { ...account, type: null },
+                      });
+                      break;
+                    }
                     default: {
                       throw new Error(
                         `Unrecognized menu option: ${String(type)}`,
@@ -283,6 +307,15 @@ export function Account<FieldName extends SheetFields<'account'>>({
                 }}
                 items={[
                   { name: 'rename', text: t('Rename') },
+                  account.type === 'credit'
+                    ? {
+                        name: 'set-type-bank',
+                        text: t('Set as Checking / Savings'),
+                      }
+                    : {
+                        name: 'set-type-credit',
+                        text: t('Set as Credit Card'),
+                      },
                   account.closed
                     ? { name: 'reopen', text: t('Reopen') }
                     : { name: 'close', text: t('Close') },

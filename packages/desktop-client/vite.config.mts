@@ -345,6 +345,16 @@ export default defineConfig(async ({ mode, command }) => {
       watch: {
         disableGlobbing: false,
       },
+      proxy: {
+        '/favicon-proxy': {
+          target: 'https://icons.duckduckgo.com',
+          changeOrigin: true,
+          rewrite: path => {
+            const domain = path.replace('/favicon-proxy/', '');
+            return `/ip3/${domain}.ico`;
+          },
+        },
+      },
     },
     resolve: {
       ...(mode !== 'browser' && {

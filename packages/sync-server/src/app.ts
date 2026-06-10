@@ -128,6 +128,32 @@ app.get('/metrics', (_req, res) => {
   });
 });
 
+// Favicon proxy — forwards /favicon-proxy/<domain> to DuckDuckGo's icon CDN.
+// Keeps requests same-origin so the CSP img-src 'self' policy allows them.
+app.get('/favicon-proxy/:domain', async (req, res) => {
+  const domain = req.params.domain;
+  if (!domain || !/^[a-zA-Z0-9.-]+$/.test(domain)) {
+    res.status(400).send('Invalid domain');
+    return;
+  }
+  try {
+    const upstream = await fetch(
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    );
+    if (!upstream.ok) {
+      res.status(upstream.status).send('Not found');
+      return;
+    }
+    const contentType = upstream.headers.get('content-type') ?? 'image/x-icon';
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    const buf = await upstream.arrayBuffer();
+    res.send(Buffer.from(buf));
+  } catch {
+    res.status(502).send('Proxy error');
+  }
+});
+
 // The web frontend.
 // Dev mode proxies to Vite, which injects inline preamble scripts and uses
 // a websocket for HMR. Loosen script-src and connect-src accordingly.

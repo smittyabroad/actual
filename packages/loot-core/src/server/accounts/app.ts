@@ -93,12 +93,14 @@ async function updateAccount({
   id,
   name,
   last_reconciled,
+  type,
 }: Pick<AccountEntity, 'id' | 'name'> &
-  Partial<Pick<AccountEntity, 'last_reconciled'>>) {
+  Partial<Pick<AccountEntity, 'last_reconciled' | 'type'>>) {
   await db.update('accounts', {
     id,
     name,
     ...(last_reconciled && { last_reconciled }),
+    ...(type !== undefined ? { type: type ?? null } : {}),
   });
   return {};
 }
@@ -127,6 +129,7 @@ async function getAccounts(): Promise<AccountEntity[]> {
         account_sync_source: dbAccount.account_sync_source ?? null,
         last_sync: dbAccount.last_sync ?? null,
         bank_sync_status: dbAccount.bank_sync_status ?? null,
+        type: dbAccount.type ?? null,
       }) satisfies AccountEntity,
   );
 }
@@ -548,16 +551,19 @@ async function createAccount({
   balance = 0,
   offBudget = false,
   closed = false,
+  type = null,
 }: {
   name: string;
   balance?: number | undefined;
   offBudget?: boolean | undefined;
   closed?: boolean | undefined;
+  type?: string | null | undefined;
 }) {
   const id: AccountEntity['id'] = await db.insertAccount({
     name,
     offbudget: offBudget ? 1 : 0,
     closed: closed ? 1 : 0,
+    ...(type != null ? { type } : {}),
   });
 
   await db.insertPayee({

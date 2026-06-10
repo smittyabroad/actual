@@ -637,6 +637,9 @@ export type Modal =
       name: 'keyboard-shortcuts';
     }
   | {
+      name: 'subscriptions';
+    }
+  | {
       name: 'goal-templates';
     }
   | {

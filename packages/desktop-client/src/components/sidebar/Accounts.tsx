@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import type { AccountEntity } from '@actual-app/core/types/models';
@@ -20,6 +21,21 @@ import { Account } from './Account';
 import { SecondaryItem } from './SecondaryItem';
 
 const fontWeight = 600;
+
+const sectionHeaderStyle = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 1,
+  textTransform: 'uppercase' as const,
+  color: theme.sidebarItemText,
+  opacity: 0.45,
+  paddingLeft: 4,
+  paddingTop: 10,
+  paddingBottom: 3,
+  flexShrink: 0,
+} as const;
+
+const isCreditAccount = (account: AccountEntity) => account.type === 'credit';
 
 export function Accounts() {
   const { t } = useTranslation();
@@ -114,7 +130,36 @@ export function Accounts() {
           />
         )}
 
-        {onBudgetAccounts.map((account, i) => (
+        {onBudgetAccounts.some(a => !isCreditAccount(a)) &&
+          onBudgetAccounts.some(isCreditAccount) && (
+            <Text style={sectionHeaderStyle}>{t('Bank Accounts')}</Text>
+          )}
+
+        {onBudgetAccounts
+          .filter(a => !isCreditAccount(a))
+          .map((account, i) => (
+            <Account
+              key={account.id}
+              name={account.name}
+              account={account}
+              connected={!!account.bank}
+              pending={syncingAccountIds.includes(account.id)}
+              failed={isAccountFailedSync(account)}
+              updated={updatedAccounts.includes(account.id)}
+              to={getAccountPath(account)}
+              query={bindings.accountBalance(account.id)}
+              onDragChange={onDragChange}
+              onDrop={onReorder}
+              outerStyle={makeDropPadding(i)}
+            />
+          ))}
+
+        {onBudgetAccounts.some(isCreditAccount) &&
+          onBudgetAccounts.some(a => !isCreditAccount(a)) && (
+            <Text style={sectionHeaderStyle}>{t('Credit Cards')}</Text>
+          )}
+
+        {onBudgetAccounts.filter(isCreditAccount).map((account, i) => (
           <Account
             key={account.id}
             name={account.name}
@@ -146,7 +191,36 @@ export function Accounts() {
           />
         )}
 
-        {offbudgetAccounts.map((account, i) => (
+        {offbudgetAccounts.some(a => !isCreditAccount(a)) &&
+          offbudgetAccounts.some(isCreditAccount) && (
+            <Text style={sectionHeaderStyle}>{t('Bank Accounts')}</Text>
+          )}
+
+        {offbudgetAccounts
+          .filter(a => !isCreditAccount(a))
+          .map((account, i) => (
+            <Account
+              key={account.id}
+              name={account.name}
+              account={account}
+              connected={!!account.bank}
+              pending={syncingAccountIds.includes(account.id)}
+              failed={isAccountFailedSync(account)}
+              updated={updatedAccounts.includes(account.id)}
+              to={getAccountPath(account)}
+              query={bindings.accountBalance(account.id)}
+              onDragChange={onDragChange}
+              onDrop={onReorder}
+              outerStyle={makeDropPadding(i)}
+            />
+          ))}
+
+        {offbudgetAccounts.some(isCreditAccount) &&
+          offbudgetAccounts.some(a => !isCreditAccount(a)) && (
+            <Text style={sectionHeaderStyle}>{t('Credit Cards')}</Text>
+          )}
+
+        {offbudgetAccounts.filter(isCreditAccount).map((account, i) => (
           <Account
             key={account.id}
             name={account.name}

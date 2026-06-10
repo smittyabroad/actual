@@ -74,6 +74,7 @@ import { PluggyAiInitialiseModal } from './modals/PluggyAiInitialiseModal';
 import { ScheduledTransactionMenuModal } from './modals/ScheduledTransactionMenuModal';
 import { SelectLinkedAccountsModal } from './modals/SelectLinkedAccountsModal';
 import { SimpleFinInitialiseModal } from './modals/SimpleFinInitialiseModal';
+import { SubscriptionsModal } from './modals/SubscriptionsModal';
 import { TrackingBalanceMenuModal } from './modals/TrackingBalanceMenuModal';
 import { TrackingBudgetMenuModal } from './modals/TrackingBudgetMenuModal';
 import { TrackingBudgetMonthMenuModal } from './modals/TrackingBudgetMonthMenuModal';
@@ -125,6 +126,9 @@ export function Modals() {
         case 'keyboard-shortcuts':
           // don't show the hotkey help modal when a budget is not open
           return budgetId ? <KeyboardShortcutModal key={key} /> : null;
+
+        case 'subscriptions':
+          return budgetId ? <SubscriptionsModal key={key} /> : null;
 
         case 'import-transactions':
           return <ImportTransactionsModal key={key} {...modal.options} />;

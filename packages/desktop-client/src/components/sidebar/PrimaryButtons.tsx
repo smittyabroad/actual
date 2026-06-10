@@ -7,6 +7,7 @@ import {
   SvgCheveronRight,
   SvgCog,
   SvgCreditCard,
+  SvgRefresh,
   SvgReports,
   SvgStoreFront,
   SvgTag,
@@ -18,12 +19,15 @@ import { View } from '@actual-app/components/view';
 
 import { useIsTestEnv } from '#hooks/useIsTestEnv';
 import { useSyncServerStatus } from '#hooks/useSyncServerStatus';
+import { pushModal } from '#modals/modalsSlice';
+import { useDispatch } from '#redux';
 
 import { Item } from './Item';
 import { SecondaryItem } from './SecondaryItem';
 
 export function PrimaryButtons() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const [isOpen, setOpen] = useState(false);
   const onToggle = useCallback(() => setOpen(open => !open), []);
   const location = useLocation();
@@ -90,6 +94,14 @@ export function PrimaryButtons() {
             title={t('Settings')}
             Icon={SvgCog}
             to="/settings"
+            indent={15}
+          />
+          <SecondaryItem
+            title={t('Subscriptions')}
+            Icon={SvgRefresh}
+            onClick={() =>
+              dispatch(pushModal({ modal: { name: 'subscriptions' } }))
+            }
             indent={15}
           />
         </>
