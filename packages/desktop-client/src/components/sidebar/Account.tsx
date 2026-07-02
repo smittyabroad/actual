@@ -11,8 +11,6 @@ import {
 } from '@actual-app/components/icons/v2';
 import { InitialFocus } from '@actual-app/components/initial-focus';
 import { Input } from '@actual-app/components/input';
-import { Menu } from '@actual-app/components/menu';
-import { Popover } from '@actual-app/components/popover';
 import { SpaceBetween } from '@actual-app/components/space-between';
 import { styles } from '@actual-app/components/styles';
 import { Text } from '@actual-app/components/text';
@@ -35,7 +33,7 @@ import { useIsTestEnv } from '#hooks/useIsTestEnv';
 import { useNotes } from '#hooks/useNotes';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { openAccountCloseModal } from '#modals/modalsSlice';
-import { useDispatch } from '#redux';
+import { useDispatch, useSelector } from '#redux';
 import type { Binding, SheetFields } from '#spreadsheet';
 
 import { BankLogo } from './BankLogo';
@@ -99,8 +97,6 @@ export function Account<FieldName extends SheetFields<'account'>>({
     : 'title';
 
   const triggerRef = useRef(null);
-  const { setMenuOpen, menuOpen, handleContextMenu, position } =
-    useContextMenu();
 
   const { dragRef } = useDraggable({
     type,
@@ -134,12 +130,55 @@ export function Account<FieldName extends SheetFields<'account'>>({
 
   const balanceCell = <CellValue binding={query} type="financial" />;
 
+  const isContextMenuOpen = useSelector(state =>
+    state.contextMenu.items.some(
+      i =>
+        typeof i === 'object' && 'name' in i && i.name.startsWith('account-'),
+    ),
+  );
+  useContextMenu({
+    triggerRef,
+    enabled: account && needsTooltip,
+    items: [
+      {
+        name: 'account-rename',
+        text: t('Rename'),
+        onClick: () => setIsEditing(true),
+      },
+      account?.type === 'credit'
+        ? {
+            name: 'account-set-type-bank',
+            text: t('Set as Checking / Savings'),
+            onClick: () =>
+              updateAccount.mutate({
+                account: { ...account, type: null },
+              }),
+          }
+        : {
+            name: 'account-set-type-credit',
+            text: t('Set as Credit Card'),
+            onClick: () =>
+              updateAccount.mutate({
+                account: { ...account, type: 'credit' },
+              }),
+          },
+      account?.closed
+        ? {
+            name: 'account-reopen',
+            text: t('Reopen'),
+            onClick: () => reopenAccount.mutate({ id: account.id }),
+          }
+        : {
+            name: 'account-close',
+            text: t('Close'),
+            onClick: () =>
+              dispatch(openAccountCloseModal({ accountId: account.id })),
+          },
+    ],
+  });
+
   const accountRow = (
-    <View
-      innerRef={dropRef}
-      style={{ flexShrink: 0, ...outerStyle }}
-      onContextMenu={needsTooltip ? handleContextMenu : undefined}
-    >
+    <View innerRef={dropRef} style={{ flexShrink: 0, ...outerStyle }}>
       <View innerRef={triggerRef}>
         <DropHighlight pos={dropPos} />
         <View innerRef={handleDragRef}>
@@ -258,71 +297,6 @@ export function Account<FieldName extends SheetFields<'account'>>({
               }
             />
           </Link>
-          {account && (
-            <Popover
-              triggerRef={triggerRef}
-              placement="bottom start"
-              isOpen={menuOpen}
-              onOpenChange={() => setMenuOpen(false)}
-              style={{ width: 200, margin: 1 }}
-              isNonModal
-              {...position}
-            >
-              <Menu
-                onMenuSelect={type => {
-                  switch (type) {
-                    case 'close': {
-                      void dispatch(
-                        openAccountCloseModal({ accountId: account.id }),
-                      );
-                      break;
-                    }
-                    case 'reopen': {
-                      reopenAccount.mutate({ id: account.id });
-                      break;
-                    }
-                    case 'rename': {
-                      setIsEditing(true);
-                      break;
-                    }
-                    case 'set-type-credit': {
-                      updateAccount.mutate({
-                        account: { ...account, type: 'credit' },
-                      });
-                      break;
-                    }
-                    case 'set-type-bank': {
-                      updateAccount.mutate({
-                        account: { ...account, type: null },
-                      });
-                      break;
-                    }
-                    default: {
-                      throw new Error(
-                        `Unrecognized menu option: ${String(type)}`,
-                      );
-                    }
-                  }
-                  setMenuOpen(false);
-                }}
-                items={[
-                  { name: 'rename', text: t('Rename') },
-                  account.type === 'credit'
-                    ? {
-                        name: 'set-type-bank',
-                        text: t('Set as Checking / Savings'),
-                      }
-                    : {
-                        name: 'set-type-credit',
-                        text: t('Set as Credit Card'),
-                      },
-                  account.closed
-                    ? { name: 'reopen', text: t('Reopen') }
-                    : { name: 'close', text: t('Close') },
-                ]}
-              />
-            </Popover>
-          )}
         </View>
       </View>
     </View>
@@ -403,7 +377,7 @@ export function Account<FieldName extends SheetFields<'account'>>({
       triggerProps={{
         delay: 1000,
         closeDelay: 250,
-        isDisabled: menuOpen,
+        isDisabled: isContextMenuOpen,
       }}
     >
       {accountRow}
