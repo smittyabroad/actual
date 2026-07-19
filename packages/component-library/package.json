@@ -3,7 +3,16 @@
   "version": "0.0.1",
   "license": "MIT",
   "imports": {
-    "#tokens": "./src/tokens.ts"
+    "#tokens": "./src/tokens.ts",
+    "#Button": "./src/Button.tsx",
+    "#ModeButton": "./src/ModeButton.tsx",
+    "#Popover": "./src/Popover.tsx",
+    "#styles": "./src/styles.ts",
+    "#Text": "./src/Text.tsx",
+    "#theme": "./src/theme.ts",
+    "#View": "./src/View.tsx",
+    "#hooks/*": "./src/hooks/*.ts",
+    "#icons/v1": "./src/icons/v1/index.ts"
   },
   "exports": {
     "./hooks/*": "./src/hooks/*.ts",
@@ -23,6 +32,7 @@
     "./input": "./src/Input.tsx",
     "./label": "./src/Label.tsx",
     "./menu": "./src/Menu.tsx",
+    "./mode-button": "./src/ModeButton.tsx",
     "./paragraph": "./src/Paragraph.tsx",
     "./popover": "./src/Popover.tsx",
     "./select": "./src/Select.tsx",
@@ -39,7 +49,8 @@
     "./toggle": "./src/Toggle.tsx",
     "./tooltip": "./src/Tooltip.tsx",
     "./view": "./src/View.tsx",
-    "./color-picker": "./src/ColorPicker.tsx"
+    "./color-picker": "./src/ColorPicker.tsx",
+    "./date-range-picker": "./src/DateRangePicker.tsx"
   },
   "scripts": {
     "generate:icons": "rm src/icons/*/*.tsx; cd src/icons && svgr --template template.ts --index-template index-template.ts --typescript --expand-props start -d . .",
@@ -50,6 +61,7 @@
   },
   "dependencies": {
     "@emotion/css": "^11.13.5",
+    "@internationalized/date": "^3.12.2",
     "react-aria-components": "^1.18.0",
     "usehooks-ts": "^3.1.1"
   },
