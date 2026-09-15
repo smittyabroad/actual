@@ -180,6 +180,23 @@ The chart shows your total balance from your current age to your target age - bu
 
 The dropdown above the chart switches views. **Single worst run** shows the one unluckiest replay in full. The **Worst-case**, **Pessimistic**, **Median** and **Optimistic** views each trace a single percentile - for example, the pessimistic line is the level that 70% of replays stayed above.
 
+### The Cashflow Chart
+
+![The cashflow chart](/img/experimental/monte-carlo-analysis/monte-carlo-cashflow-chart.png)
+
+Switch the results view from **Chart** to **Cashflow** to see the money moving in and out of your pots each year, for one simulated run at a time:
+
+- **Above zero**: money coming in - each pot's withdrawal for the year (one color per pot), plus each contribution being paid in (one color per contribution).
+- **Below zero**: money going out - the year's planned spending, colored by the spending phase it belongs to, plus the tax paid on withdrawals.
+
+Management fees don't appear here - they are charged inside the pots and never pass through your hands, and the run detail table lists them.
+
+On a run that fails, the chart doesn't stop at the failure year: the remaining years keep showing the spending the plan still called for, dimmed, with nothing coming in to fund it - so the size of the gap is visible at a glance. Those dimmed bars are held at the failure year's level - its price level, since a dead run no longer experiences inflation, and any cut or raise a withdrawal rule had in force at the time.
+
+The spending bars show the _plan_ - the phase amount, adjusted for inflation and any withdrawal rule - rather than the money actually delivered. That's what makes trouble visible: in a shortfall year the withdrawal bars fall visibly short of the spending bar, and when a minimum withdrawal forces out more than the plan asked for, the bars overshoot it.
+
+Use the dropdown above the chart to pick which run to look at: the worst run, a typically-bad or typically-good outcome (the 25th and 75th percentiles), the median, or the best run. These are the same runs the **Jump to** dropdown in the runs view lands on. The chart also appears above the year-by-year table when you click into any individual run, so you can see that specific run's flows at a glance.
+
 ### When Did the Pot Run Out?
 
 ![The depletion histogram](/img/experimental/monte-carlo-analysis/monte-carlo-histogram.png)
@@ -190,7 +207,7 @@ This bar chart only counts the replays that failed, showing at which age they ra
 
 ![The simulation runs table](/img/experimental/monte-carlo-analysis/monte-carlo-runs.png)
 
-Switch the results view from **Chart** to **Runs** to see every replay listed from worst outcome to best. Rather than paging through thousands of runs, use the **Jump to** dropdown to go straight to the worst, median or best run - or the 25th/75th percentile for a typically-bad or typically-good outcome - with the run highlighted so you can click into it. Click any run to walk through it year by year: the balance at the start of each year, the contributions paid in (when your plan has any), the withdrawal taken, the investment growth in that year (as money and as a percentage), the year's inflation rate (when inflation is enabled), and the balance at the end. Expand a year with the arrow at the start of its row (or use **Expand all years**) for the fully labeled breakdown: the withdrawal split into gross, tax and money to spend; the contributions added; the fees paid; and a small table showing each pot's balance at the start of the year, what was contributed into it, what it contributed to the withdrawal, how much of that counted as taxable income, the tax paid on its share, the fee it was charged that year, its return that year, and its ending balance - so you can watch, for example, the cash pot covering spending after a crash while the stock pots are left alone. With the tax-bands model, the per-pot tax is the year's tax bill shared out in proportion to each pot's taxable income.
+Switch the results view from **Chart** to **Runs** to see every replay listed from worst outcome to best. Rather than paging through thousands of runs, use the **Jump to** dropdown to go straight to the worst, median or best run - or the 25th/75th percentile for a typically-bad or typically-good outcome - with the run highlighted so you can click into it. Click any run to walk through it year by year: the balance at the start of each year, the contributions paid in (when your plan has any), the withdrawal taken, the investment growth in that year (as money and as a percentage), the year's inflation rate (when inflation is enabled), and the balance at the end. Expand a year with the arrow at the start of its row (or use **Expand all years**) for the fully labeled breakdown: the withdrawal split into gross, tax and money to spend; when a withdrawal rule is active, a sentence showing how the rule arrived at that year's amount (and whether the minimum withdrawal stepped in); the contributions added; the fees paid; and a small table showing each pot's balance at the start of the year, what was contributed into it, what it contributed to the withdrawal, how much of that counted as taxable income, the tax paid on its share, the fee it was charged that year, its return that year, and its ending balance - so you can watch, for example, the cash pot covering spending after a crash while the stock pots are left alone. With the tax-bands model, the per-pot tax is the year's tax bill shared out in proportion to each pot's taxable income.
 
 ![The simulation run table](/img/experimental/monte-carlo-analysis/monte-carlo-run.png)
 
