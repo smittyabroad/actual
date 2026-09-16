@@ -10,16 +10,24 @@ import { envelopeBudget } from '#spreadsheet/bindings';
 // tint so a low category stands out without needing to read the number.
 const LOW_REMAINING_THRESHOLD = 0.2;
 
-// Kept deliberately faint — this is a background hint, not a chart.
-const FILL_OPACITY = '13%';
+// The rail is inset by the same 5px the cell's content is, so its ends line up
+// with the balance text rather than the cell border.
+const RAIL_INSET = 5;
+const RAIL_HEIGHT = 4;
+
+// The track spans the full width at every row, which is what makes a fill
+// readable as a proportion — without it there is no visible "100%" to
+// measure against.
+const TRACK_OPACITY = '28%';
+const FILL_OPACITY = '75%';
 
 type BalanceProgressBarProps = {
   categoryId: string;
 };
 
 /**
- * A faint bar behind the balance cell showing how much of this month's
- * budget is still left in the category. Purely decorative: the balance
+ * A slim rail along the bottom of the balance cell showing how much of this
+ * month's budget is still left in the category. Purely decorative: the balance
  * amount itself remains the accessible value.
  */
 export function BalanceProgressBar({ categoryId }: BalanceProgressBarProps) {
@@ -43,19 +51,33 @@ export function BalanceProgressBar({ categoryId }: BalanceProgressBarProps) {
       ? theme.warningText
       : theme.noticeText;
 
+  const railStyle = {
+    position: 'absolute',
+    bottom: 3,
+    left: RAIL_INSET,
+    height: RAIL_HEIGHT,
+    borderRadius: RAIL_HEIGHT / 2,
+    pointerEvents: 'none',
+  } as const;
+
   return (
-    <View
-      aria-hidden
-      style={{
-        position: 'absolute',
-        top: 4,
-        bottom: 4,
-        right: 0,
-        width: `${remaining * 100}%`,
-        borderRadius: 2,
-        pointerEvents: 'none',
-        backgroundColor: `color-mix(in srgb, ${color} ${FILL_OPACITY}, transparent)`,
-      }}
-    />
+    <>
+      <View
+        aria-hidden
+        style={{
+          ...railStyle,
+          right: RAIL_INSET,
+          backgroundColor: `color-mix(in srgb, ${theme.tableBorderSeparator} ${TRACK_OPACITY}, transparent)`,
+        }}
+      />
+      <View
+        aria-hidden
+        style={{
+          ...railStyle,
+          width: `calc((100% - ${RAIL_INSET * 2}px) * ${remaining})`,
+          backgroundColor: `color-mix(in srgb, ${color} ${FILL_OPACITY}, transparent)`,
+        }}
+      />
+    </>
   );
 }
