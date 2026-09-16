@@ -13,6 +13,7 @@ const LOW_REMAINING_THRESHOLD = 0.2;
 // The rail is inset by the same 5px the cell's content is, so its ends line up
 // with the balance text rather than the cell border.
 const RAIL_INSET = 5;
+const RAIL_BOTTOM = 3;
 const RAIL_HEIGHT = 4;
 
 // The track spans the full width at every row, which is what makes a fill
@@ -20,6 +21,15 @@ const RAIL_HEIGHT = 4;
 // measure against.
 const TRACK_OPACITY = '28%';
 const FILL_OPACITY = '75%';
+const NOTCH_OPACITY = '75%';
+
+// Quarter marks, with the halfway one drawn larger so the eye lands on the
+// midpoint first and reads the quarters as secondary.
+const NOTCHES = [
+  { at: 0.25, width: 1, height: RAIL_HEIGHT, bottom: RAIL_BOTTOM },
+  { at: 0.5, width: 2, height: RAIL_HEIGHT + 4, bottom: RAIL_BOTTOM - 2 },
+  { at: 0.75, width: 1, height: RAIL_HEIGHT, bottom: RAIL_BOTTOM },
+];
 
 type BalanceProgressBarProps = {
   categoryId: string;
@@ -51,9 +61,12 @@ export function BalanceProgressBar({ categoryId }: BalanceProgressBarProps) {
       ? theme.warningText
       : theme.noticeText;
 
+  // The drawable span, once both insets are taken off the cell's width.
+  const span = `(100% - ${RAIL_INSET * 2}px)`;
+
   const railStyle = {
     position: 'absolute',
-    bottom: 3,
+    bottom: RAIL_BOTTOM,
     left: RAIL_INSET,
     height: RAIL_HEIGHT,
     borderRadius: RAIL_HEIGHT / 2,
@@ -74,10 +87,27 @@ export function BalanceProgressBar({ categoryId }: BalanceProgressBarProps) {
         aria-hidden
         style={{
           ...railStyle,
-          width: `calc((100% - ${RAIL_INSET * 2}px) * ${remaining})`,
+          width: `calc(${span} * ${remaining})`,
           backgroundColor: `color-mix(in srgb, ${color} ${FILL_OPACITY}, transparent)`,
         }}
       />
+      {NOTCHES.map(notch => (
+        <View
+          key={notch.at}
+          aria-hidden
+          style={{
+            position: 'absolute',
+            bottom: notch.bottom,
+            left: `calc(${RAIL_INSET}px + ${span} * ${notch.at})`,
+            transform: 'translateX(-50%)',
+            width: notch.width,
+            height: notch.height,
+            borderRadius: notch.width / 2,
+            pointerEvents: 'none',
+            backgroundColor: `color-mix(in srgb, ${theme.tableBorderSeparator} ${NOTCH_OPACITY}, transparent)`,
+          }}
+        />
+      ))}
     </>
   );
 }
