@@ -33,6 +33,7 @@ import { envelopeBudget } from '#spreadsheet/bindings';
 import type { CategoryGroupMonthProps, CategoryMonthProps } from '..';
 
 import { BalanceMovementMenu } from './BalanceMovementMenu';
+import { BalanceProgressBar } from './BalanceProgressBar';
 import { BudgetMenu } from './BudgetMenu';
 import { IncomeMenu } from './IncomeMenu';
 
@@ -495,6 +496,7 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
         width="flex"
         style={{ paddingRight: styles.monthRightPadding, textAlign: 'right' }}
       >
+        <BalanceProgressBar categoryId={category.id} />
         <Button
           variant="bare"
           onPress={() => {
@@ -515,6 +517,8 @@ export const ExpenseCategoryMonth = memo(function ExpenseCategoryMonth({
             background: 'transparent',
             width: '100%',
             padding: 0,
+            // Keeps the number painted above the progress bar behind it
+            position: 'relative',
           }}
         >
           <BalanceWithCarryover
