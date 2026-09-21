@@ -35,6 +35,7 @@ import { useSyncedPref } from '#hooks/useSyncedPref';
 import { openAccountCloseModal } from '#modals/modalsSlice';
 import { useDispatch, useSelector } from '#redux';
 import type { Binding, SheetFields } from '#spreadsheet';
+import { isTouchDevice } from '#util/isTouchDevice';
 
 import { BankLogo } from './BankLogo';
 
@@ -121,10 +122,7 @@ export function Account<FieldName extends SheetFields<'account'>>({
   const [isEditing, setIsEditing] = useState(false);
 
   const accountNote = useNotes(`account-${account?.id}`);
-  const isTouchDevice =
-    window.matchMedia('(hover: none)').matches ||
-    window.matchMedia('(pointer: coarse)').matches;
-  const needsTooltip = !!account?.id && !isTouchDevice;
+  const needsTooltip = !!account?.id && !isTouchDevice();
   const reopenAccount = useReopenAccountMutation();
   const updateAccount = useUpdateAccountMutation();
 
