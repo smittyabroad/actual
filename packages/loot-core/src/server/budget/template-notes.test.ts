@@ -577,6 +577,43 @@ describe('editable template amounts', () => {
     );
   });
 
+  it('rounds amounts to cents', () => {
+    expect(setEditableTemplateAmount('#template 10', 0, 12.345)).toBe(
+      '#template 12.35',
+    );
+  });
+
+  it('counts template lines the same way the parser does', () => {
+    // The parser ignores a capitalized #Template line, so it must not shift
+    // which line index 0 points at.
+    const note = '#Template 99\n#template 10';
+
+    expect(getEditableTemplateAmounts(note)).toEqual([10]);
+    expect(setEditableTemplateAmount(note, 0, 20)).toBe(
+      '#Template 99\n#template 20',
+    );
+  });
+
+  it.each([
+    ['a string amount', '10\n#template 99999'],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['a negative amount', -5],
+  ])('rejects %s', (_label, amount) => {
+    expect(
+      setEditableTemplateAmount('#template 10', 0, amount as number),
+    ).toBeNull();
+  });
+
+  it.each([
+    ['a negative index', -1],
+    ['a fractional index', 0.5],
+  ])('rejects %s', (_label, index) => {
+    expect(
+      setEditableTemplateAmount('#template 10\n#template 20', index, 5),
+    ).toBeNull();
+  });
+
   it.each([
     ['a by-date template', '#template 350 by 2026-06 repeat every year', 0],
     ['a schedule template', '#template schedule Mortgage', 0],

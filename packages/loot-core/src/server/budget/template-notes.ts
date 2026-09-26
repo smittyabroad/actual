@@ -106,12 +106,10 @@ function getAmountEditTarget(
   return null;
 }
 
+// Must match how getCategoriesWithTemplates spots template lines (including
+// case) so a line index here points at the same template it parsed.
 export function isTemplateLine(line: string): boolean {
-  return line
-    .substring(line.indexOf('#'))
-    .trim()
-    .toLowerCase()
-    .startsWith(TEMPLATE_PREFIX);
+  return line.substring(line.indexOf('#')).trim().startsWith(TEMPLATE_PREFIX);
 }
 
 function parseEditTarget(line: string) {
@@ -139,6 +137,18 @@ export function setEditableTemplateAmount(
   templateIndex: number,
   amount: number,
 ): string | null {
+  // Callers can reach this through the API, so reject anything that isn't a
+  // plain non-negative amount before it is written into the note text.
+  if (
+    typeof amount !== 'number' ||
+    !Number.isFinite(amount) ||
+    amount < 0 ||
+    !Number.isInteger(templateIndex) ||
+    templateIndex < 0
+  ) {
+    return null;
+  }
+  const roundedAmount = Math.round(amount * 100) / 100;
   const lines = note.split('\n');
   const lineIndex = lines
     .flatMap((line, index) => (isTemplateLine(line) ? [index] : []))
@@ -151,7 +161,7 @@ export function setEditableTemplateAmount(
   if (!edit) {
     return null;
   }
-  const newLine = templateToLine(edit.set(amount), undefined);
+  const newLine = templateToLine(edit.set(roundedAmount), undefined);
   if (newLine == null) {
     return null;
   }
