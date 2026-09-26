@@ -10,6 +10,8 @@ import {
 import type { CategoryWithTemplateNote } from './statements';
 import {
   checkTemplateNotes,
+  getEditableTemplateAmounts,
+  setEditableTemplateAmount,
   storeNoteTemplates,
   unparse,
 } from './template-notes';
@@ -524,5 +526,64 @@ describe('unparse descriptions', () => {
     ]);
 
     expect(serialized).toBe('first\nsecond\n#template 10');
+  });
+});
+
+describe('editable template amounts', () => {
+  it.each([
+    ['#template 150', 150, 175, '#template 175'],
+    ['#template up to 1600', 1600, 1800, '#template up to 1800'],
+    ['#template up to 300 hold', 300, 350, '#template up to 350 hold'],
+    ['#template-2 50', 50, 60, '#template-2 60'],
+    [
+      '#template 25 repeat every 1 months starting 2024-01-01',
+      25,
+      30,
+      '#template 30 repeat every 1 months starting 2024-01-01',
+    ],
+  ])('reads and rewrites %s', (note, current, next, expected) => {
+    expect(getEditableTemplateAmounts(note)).toEqual([current]);
+    expect(setEditableTemplateAmount(note, 0, next)).toBe(expected);
+  });
+
+  it('keeps the rest of the note untouched', () => {
+    const note = 'Weekly shop\n  #template up to 1600\n#cleanup source';
+
+    expect(setEditableTemplateAmount(note, 0, 1800)).toBe(
+      'Weekly shop\n  #template up to 1800\n#cleanup source',
+    );
+  });
+
+  it('addresses each template line in a multi-template note', () => {
+    const note = [
+      "Aaron's Metro",
+      '#template 65',
+      "Meredith's Total Wireless",
+      '#template 25',
+      '#goal 500',
+      'Amex Delta',
+      '#template 350 by 2026-06 repeat every year',
+      '#template 25.56',
+      '#cleanup source',
+    ].join('\n');
+
+    // #goal lines are skipped; the by-date line is listed but not editable.
+    expect(getEditableTemplateAmounts(note)).toEqual([65, 25, null, 25.56]);
+    expect(setEditableTemplateAmount(note, 1, 30)).toBe(
+      note.replace('#template 25\n', '#template 30\n'),
+    );
+    expect(setEditableTemplateAmount(note, 3, 40)).toBe(
+      note.replace('#template 25.56', '#template 40'),
+    );
+  });
+
+  it.each([
+    ['a by-date template', '#template 350 by 2026-06 repeat every year', 0],
+    ['a schedule template', '#template schedule Mortgage', 0],
+    ['a template that does not parse', '#template nonsense words', 0],
+    ['an index past the last template line', '#template 10', 1],
+    ['a note without templates', 'just a note', 0],
+  ])('does not rewrite %s', (_label, note, index) => {
+    expect(setEditableTemplateAmount(note, index, 10)).toBeNull();
   });
 });

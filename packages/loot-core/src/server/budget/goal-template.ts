@@ -11,7 +11,16 @@ import type { Template } from '#types/models/templates';
 import { getSheetValue, isTrackingBudget, setBudget, setGoal } from './actions';
 import { CategoryTemplateContext } from './category-template-context';
 import { tombstoneOrphanCleanupGroups } from './cleanup-groups';
-import { checkTemplateNotes, storeNoteTemplates } from './template-notes';
+import { getCategoriesWithTemplateNotes } from './statements';
+import {
+  checkTemplateNotes,
+  getCategoriesWithTemplates,
+  getEditableTemplateAmounts,
+  isTemplateLine,
+  setEditableTemplateAmount,
+  storeNoteTemplates,
+  unparse,
+} from './template-notes';
 import type { TemplateNotification } from './template-notification';
 
 export function distributeRemainder(
@@ -390,4 +399,137 @@ export async function dryRunCategoryTemplate({
     budgeted: values.budgeted,
     perTemplate: templates.map(t => values.perTemplateContribution.get(t) ?? 0),
   };
+}
+
+export type TemplatePreviewLine = {
+  label: string | null;
+  templateText: string;
+  requested: number;
+  editableAmount: number | null;
+  isRemainder: boolean;
+};
+
+export type TemplatePreviewCategory = {
+  id: CategoryEntity['id'];
+  budgeted: number;
+  requested: number;
+  // One entry per #template line, in note order, so an edit can address a
+  // line by its index.
+  lines: TemplatePreviewLine[];
+};
+
+export type TemplatePreview = {
+  categories: TemplatePreviewCategory[];
+  errors: string[];
+};
+
+// Shows what every category's templates ask for this month without writing
+// anything. Templates are read straight from the notes so edits show up
+// before they are applied, and the priority clamp is skipped so the amounts
+// reflect the templates' full request rather than what To Budget can cover.
+export async function previewTemplates({
+  month,
+}: {
+  month: string;
+}): Promise<TemplatePreview> {
+  const noteTemplates = await getCategoriesWithTemplates();
+  const categoryTemplates = await getTemplates(
+    c => c.template_settings?.source === 'ui',
+  );
+  const errors: string[] = [];
+  for (const { id, name, templates } of noteTemplates) {
+    categoryTemplates[id] = templates;
+    for (const template of templates) {
+      if (template.type === 'error') {
+        errors.push(`${name}: ${template.line.trim()}`);
+      }
+    }
+  }
+
+  const notesById = new Map(
+    (await getCategoriesWithTemplateNotes()).map(({ id, note }) => [id, note]),
+  );
+
+  const computed = await computeTemplates(
+    month,
+    true,
+    categoryTemplates,
+    [],
+    true,
+  );
+  errors.push(...computed.errors);
+
+  const sheetName = monthUtils.sheetForMonth(month);
+  const categories: TemplatePreviewCategory[] = [];
+  for (const context of computed.contexts) {
+    if (context.isGoalOnly()) continue;
+    const { id } = context.category;
+    const templates = categoryTemplates[id];
+    const note = notesById.get(id);
+    const values = context.getValues();
+    categories.push({
+      id,
+      budgeted: await getSheetValue(sheetName, `budget-${id}`),
+      requested: values.budgeted,
+      lines: note
+        ? await getNoteLines(note, templates, values.perTemplateContribution)
+        : [
+            {
+              label: null,
+              templateText: await renderTemplates(templates),
+              requested: values.budgeted,
+              editableAmount: null,
+              isRemainder: templates.some(t => t.type === 'remainder'),
+            },
+          ],
+    });
+  }
+  return { categories, errors };
+}
+
+async function getNoteLines(
+  note: string,
+  templates: Template[],
+  contributions: Map<Template, number>,
+): Promise<TemplatePreviewLine[]> {
+  const editableAmounts = getEditableTemplateAmounts(note);
+  const templateLines = templates.filter(t =>
+    t.type === 'error' ? isTemplateLine(t.line) : t.directive === 'template',
+  );
+  return Promise.all(
+    templateLines.map(async (template, index) => ({
+      label: template.description?.split('\n').join(' ') ?? null,
+      templateText:
+        template.type === 'error'
+          ? template.line.trim()
+          : await renderTemplates([template]),
+      requested: contributions.get(template) ?? 0,
+      editableAmount: editableAmounts[index] ?? null,
+      isRemainder: template.type === 'remainder',
+    })),
+  );
+}
+
+function renderTemplates(templates: Template[]) {
+  return unparse(templates.map(t => ({ ...t, description: undefined })));
+}
+
+// Rewrites the amount on one #template line of a category's note, then
+// refreshes the stored template so the next preview or apply sees it.
+export async function setTemplateAmount({
+  categoryId,
+  templateIndex,
+  amount,
+}: {
+  categoryId: CategoryEntity['id'];
+  templateIndex: number;
+  amount: number;
+}): Promise<boolean> {
+  const [row] = await getCategoriesWithTemplateNotes([categoryId]);
+  if (!row) return false;
+  const note = setEditableTemplateAmount(row.note, templateIndex, amount);
+  if (note == null) return false;
+  await db.update('notes', { id: categoryId, note });
+  await storeNoteTemplates([categoryId]);
+  return true;
 }

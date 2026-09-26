@@ -14,6 +14,7 @@ type BudgetMonthMenuProps = Omit<
   onSetBudgetsToZero: () => void;
   onSetMonthsAverage: (numberOfMonths: number) => void;
   onCheckTemplates: () => void;
+  onPreviewTemplates: () => void;
   onApplyBudgetTemplates: () => void;
   onOverwriteWithBudgetTemplates: () => void;
 };
@@ -23,6 +24,7 @@ export function BudgetMonthMenu({
   onSetBudgetsToZero,
   onSetMonthsAverage,
   onCheckTemplates,
+  onPreviewTemplates,
   onApplyBudgetTemplates,
   onOverwriteWithBudgetTemplates,
   ...props
@@ -51,6 +53,9 @@ export function BudgetMonthMenu({
             break;
           case 'check-templates':
             onCheckTemplates();
+            break;
+          case 'preview-templates':
+            onPreviewTemplates();
             break;
           case 'apply-goal-template':
             onApplyBudgetTemplates();
@@ -82,6 +87,10 @@ export function BudgetMonthMenu({
               {
                 name: 'check-templates',
                 text: t('Check templates'),
+              },
+              {
+                name: 'preview-templates',
+                text: t('Preview budget templates'),
               },
               {
                 name: 'apply-goal-template',

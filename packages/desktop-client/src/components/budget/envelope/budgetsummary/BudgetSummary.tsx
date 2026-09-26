@@ -19,6 +19,8 @@ import { NotesButton } from '#components/NotesButton';
 import { useLocale } from '#hooks/useLocale';
 import { SheetNameProvider } from '#hooks/useSheetName';
 import { useUndo } from '#hooks/useUndo';
+import { pushModal } from '#modals/modalsSlice';
+import { useDispatch } from '#redux';
 
 import { BudgetMonthMenu } from './BudgetMonthMenu';
 import { ToBudget } from './ToBudget';
@@ -39,6 +41,7 @@ export const BudgetSummary = memo(({ month }: BudgetSummaryProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef(null);
   const { showUndoNotification } = useUndo();
+  const dispatch = useDispatch();
 
   function onMenuOpen() {
     setMenuOpen(true);
@@ -211,6 +214,14 @@ export const BudgetSummary = memo(({ month }: BudgetSummaryProps) => {
                   onCheckTemplates={() => {
                     onBudgetAction(month, 'check-templates');
                     onMenuClose();
+                  }}
+                  onPreviewTemplates={() => {
+                    onMenuClose();
+                    dispatch(
+                      pushModal({
+                        modal: { name: 'template-preview', options: { month } },
+                      }),
+                    );
                   }}
                   onApplyBudgetTemplates={() => {
                     onBudgetAction(month, 'apply-goal-template');

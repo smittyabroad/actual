@@ -11,8 +11,11 @@ import {
   applyMultipleCategoryTemplates,
   applyTemplate,
   dryRunCategoryTemplate,
+  previewTemplates,
+  setTemplateAmount,
 } from './goal-template';
 import * as statements from './statements';
+import * as templateNotes from './template-notes';
 
 vi.mock('./actions', () => ({
   getSheetValue: vi.fn(),
@@ -25,6 +28,7 @@ vi.mock('./actions', () => ({
 vi.mock('#server/db', () => ({
   getCategories: vi.fn(),
   first: vi.fn(),
+  update: vi.fn(),
 }));
 
 vi.mock('#server/aql', () => ({
@@ -37,11 +41,17 @@ vi.mock('#server/sync', () => ({
 
 vi.mock('./statements', () => ({
   getActiveSchedules: vi.fn(),
+  getCategoriesWithTemplateNotes: vi.fn(),
 }));
 
 vi.mock('./template-notes', () => ({
   checkTemplateNotes: vi.fn(),
   storeNoteTemplates: vi.fn(),
+  getCategoriesWithTemplates: vi.fn(),
+  getEditableTemplateAmounts: vi.fn(),
+  isTemplateLine: (line: string) => line.trim().startsWith('#template'),
+  setEditableTemplateAmount: vi.fn(),
+  unparse: vi.fn(),
 }));
 
 const category: CategoryEntity = {
@@ -688,5 +698,176 @@ describe('applyTemplate (force=false)', () => {
       .mock.calls.map(call => call[0]);
     expect(budgetCalls.map(c => c.category)).toEqual([cat1.id]);
     expect(budgetCalls[0].amount).toBe(10000);
+  });
+});
+
+describe('previewTemplates', () => {
+  const groceries: CategoryEntity = { ...category, id: 'groceries' };
+  const upTo1600: Template = {
+    type: 'simple',
+    limit: { amount: 1600, hold: false, period: 'monthly' },
+    priority: 0,
+    directive: 'template',
+  };
+
+  function setupNote(note: string, templates: Template[]) {
+    vi.mocked(statements.getCategoriesWithTemplateNotes).mockResolvedValue([
+      { id: groceries.id, name: groceries.name, note },
+    ]);
+    vi.mocked(templateNotes.getCategoriesWithTemplates).mockResolvedValue([
+      { id: groceries.id, name: groceries.name, templates },
+    ]);
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(statements.getActiveSchedules).mockResolvedValue(
+      [] as Awaited<ReturnType<typeof statements.getActiveSchedules>>,
+    );
+    vi.mocked(templateNotes.unparse).mockImplementation(async templates =>
+      templates.map(t => `#template ${t.type}`).join('\n'),
+    );
+    setupAqlForWideScope([], [groceries]);
+  });
+
+  it('reports what templates ask for without budgeting anything', async () => {
+    // To Budget is empty, so an apply would clamp; the preview must not.
+    setupSheetMock({ 'to-budget': 0, [`budget-${groceries.id}`]: 50000 });
+    setupNote('#template up to 1600', [upTo1600]);
+    vi.mocked(templateNotes.getEditableTemplateAmounts).mockReturnValue([1600]);
+
+    const result = await previewTemplates({ month: '2024-01' });
+
+    expect(result.errors).toEqual([]);
+    expect(result.categories).toEqual([
+      {
+        id: groceries.id,
+        budgeted: 50000,
+        requested: 160000,
+        lines: [
+          {
+            label: null,
+            templateText: '#template simple',
+            requested: 160000,
+            editableAmount: 1600,
+            isRemainder: false,
+          },
+        ],
+      },
+    ]);
+    expect(actions.setBudget).not.toHaveBeenCalled();
+    expect(actions.setGoal).not.toHaveBeenCalled();
+    expect(templateNotes.storeNoteTemplates).not.toHaveBeenCalled();
+  });
+
+  it('splits a multi-template category into one line per template', async () => {
+    setupSheetMock({ 'to-budget': 0 });
+    const monthly = (monthlyAmount: number, description: string): Template => ({
+      type: 'simple',
+      monthly: monthlyAmount,
+      priority: 0,
+      directive: 'template',
+      description,
+    });
+    setupNote('Metro\n#template 65\n#goal 500\nFios\n#template 20', [
+      monthly(65, 'Metro'),
+      { type: 'goal', amount: 500, directive: 'goal' },
+      monthly(20, 'Fios'),
+    ]);
+    vi.mocked(templateNotes.getEditableTemplateAmounts).mockReturnValue([
+      65, 20,
+    ]);
+
+    const [phone] = (await previewTemplates({ month: '2024-01' })).categories;
+
+    expect(phone.requested).toBe(8500);
+    expect(phone.lines).toEqual([
+      expect.objectContaining({
+        label: 'Metro',
+        requested: 6500,
+        editableAmount: 65,
+      }),
+      expect.objectContaining({
+        label: 'Fios',
+        requested: 2000,
+        editableAmount: 20,
+      }),
+    ]);
+  });
+
+  it('lists templates that could not be parsed', async () => {
+    setupSheetMock({});
+    setupNote('#template up to 1600\n#template nonsense', [
+      upTo1600,
+      {
+        type: 'error',
+        directive: 'error',
+        line: '#template nonsense',
+        error: 'bad',
+      },
+    ]);
+    vi.mocked(templateNotes.getEditableTemplateAmounts).mockReturnValue([
+      1600,
+      null,
+    ]);
+
+    const result = await previewTemplates({ month: '2024-01' });
+
+    expect(result.errors).toEqual(['Groceries: #template nonsense']);
+    expect(result.categories[0].requested).toBe(160000);
+    expect(result.categories[0].lines[1]).toEqual({
+      label: null,
+      templateText: '#template nonsense',
+      requested: 0,
+      editableAmount: null,
+      isRemainder: false,
+    });
+  });
+});
+
+describe('setTemplateAmount', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(statements.getCategoriesWithTemplateNotes).mockResolvedValue([
+      { id: 'phone', name: 'Phone', note: '#template 65\n#template 25' },
+    ]);
+  });
+
+  it('rewrites the chosen line and refreshes the stored template', async () => {
+    vi.mocked(templateNotes.setEditableTemplateAmount).mockReturnValue(
+      '#template 65\n#template 30',
+    );
+
+    const result = await setTemplateAmount({
+      categoryId: 'phone',
+      templateIndex: 1,
+      amount: 30,
+    });
+
+    expect(result).toBe(true);
+    expect(templateNotes.setEditableTemplateAmount).toHaveBeenCalledWith(
+      '#template 65\n#template 25',
+      1,
+      30,
+    );
+    expect(db.update).toHaveBeenCalledWith('notes', {
+      id: 'phone',
+      note: '#template 65\n#template 30',
+    });
+    expect(templateNotes.storeNoteTemplates).toHaveBeenCalledWith(['phone']);
+  });
+
+  it('leaves the note alone when the line is not editable', async () => {
+    vi.mocked(templateNotes.setEditableTemplateAmount).mockReturnValue(null);
+
+    const result = await setTemplateAmount({
+      categoryId: 'phone',
+      templateIndex: 5,
+      amount: 30,
+    });
+
+    expect(result).toBe(false);
+    expect(db.update).not.toHaveBeenCalled();
+    expect(templateNotes.storeNoteTemplates).not.toHaveBeenCalled();
   });
 });

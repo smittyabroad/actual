@@ -69,7 +69,97 @@ export async function checkTemplateNotes(): Promise<TemplateNotification> {
   };
 }
 
-async function getCategoriesWithTemplates(
+// A #template line is editable from the preview when it holds one plain
+// monthly amount: `#template 150`, `#template up to 1600`, or
+// `#template 50 repeat every 1 months starting ...`.
+function getAmountEditTarget(
+  template: Template,
+): { get: () => number; set: (amount: number) => Template } | null {
+  if (template.type === 'simple') {
+    const { monthly, limit } = template;
+    if (monthly != null) {
+      return {
+        get: () => monthly,
+        set: amount => ({ ...template, monthly: amount }),
+      };
+    }
+    if (limit && limit.period === 'monthly') {
+      return {
+        get: () => limit.amount,
+        set: amount => ({ ...template, limit: { ...limit, amount } }),
+      };
+    }
+    return null;
+  }
+  if (
+    template.type === 'periodic' &&
+    template.period.period === 'month' &&
+    template.period.amount === 1 &&
+    !template.limit
+  ) {
+    const current = template.amount;
+    return {
+      get: () => current,
+      set: amount => ({ ...template, amount }),
+    };
+  }
+  return null;
+}
+
+export function isTemplateLine(line: string): boolean {
+  return line
+    .substring(line.indexOf('#'))
+    .trim()
+    .toLowerCase()
+    .startsWith(TEMPLATE_PREFIX);
+}
+
+function parseEditTarget(line: string) {
+  try {
+    const template: Template = parse(line.substring(line.indexOf('#')).trim());
+    return getAmountEditTarget(template);
+  } catch {
+    return null;
+  }
+}
+
+// One entry per #template line in the note, in order: the line's editable
+// amount, or null when that line can't be edited from the preview.
+export function getEditableTemplateAmounts(note: string): Array<number | null> {
+  return note
+    .split('\n')
+    .filter(isTemplateLine)
+    .map(line => parseEditTarget(line)?.get() ?? null);
+}
+
+// Rewrites the amount on the `templateIndex`-th #template line of the note,
+// leaving every other line untouched.
+export function setEditableTemplateAmount(
+  note: string,
+  templateIndex: number,
+  amount: number,
+): string | null {
+  const lines = note.split('\n');
+  const lineIndex = lines
+    .flatMap((line, index) => (isTemplateLine(line) ? [index] : []))
+    .at(templateIndex);
+  if (lineIndex === undefined) {
+    return null;
+  }
+  const line = lines[lineIndex];
+  const edit = parseEditTarget(line);
+  if (!edit) {
+    return null;
+  }
+  const newLine = templateToLine(edit.set(amount), undefined);
+  if (newLine == null) {
+    return null;
+  }
+  lines[lineIndex] = line.substring(0, line.indexOf('#')) + newLine;
+  return lines.join('\n');
+}
+
+export async function getCategoriesWithTemplates(
   categoryIds?: string[],
 ): Promise<CategoryWithTemplateNotes[]> {
   const templatesForCategory: CategoryWithTemplateNotes[] = [];

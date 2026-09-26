@@ -669,6 +669,12 @@ export type Modal =
       name: 'goal-templates';
     }
   | {
+      name: 'template-preview';
+      options: {
+        month: string;
+      };
+    }
+  | {
       name: 'schedules-upcoming-length';
     }
   | {

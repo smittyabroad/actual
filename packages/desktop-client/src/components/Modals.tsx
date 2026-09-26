@@ -77,6 +77,7 @@ import { ScheduledTransactionMenuModal } from './modals/ScheduledTransactionMenu
 import { SelectLinkedAccountsModal } from './modals/SelectLinkedAccountsModal';
 import { SimpleFinInitialiseModal } from './modals/SimpleFinInitialiseModal';
 import { SubscriptionsModal } from './modals/SubscriptionsModal';
+import { TemplatePreviewModal } from './modals/TemplatePreviewModal';
 import { TrackingBalanceMenuModal } from './modals/TrackingBalanceMenuModal';
 import { TrackingBudgetMenuModal } from './modals/TrackingBudgetMenuModal';
 import { TrackingBudgetMonthMenuModal } from './modals/TrackingBudgetMonthMenuModal';
@@ -115,6 +116,11 @@ export function Modals() {
       switch (name) {
         case 'goal-templates':
           return budgetId ? <GoalTemplateModal key={key} /> : null;
+
+        case 'template-preview':
+          return budgetId ? (
+            <TemplatePreviewModal key={key} {...modal.options} />
+          ) : null;
 
         case 'category-automations-edit':
           return budgetId ? (

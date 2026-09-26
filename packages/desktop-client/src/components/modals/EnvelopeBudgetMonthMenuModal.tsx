@@ -22,6 +22,8 @@ import { useLocale } from '#hooks/useLocale';
 import { useNotes } from '#hooks/useNotes';
 import { useUndo } from '#hooks/useUndo';
 import type { Modal as ModalType } from '#modals/modalsSlice';
+import { pushModal } from '#modals/modalsSlice';
+import { useDispatch } from '#redux';
 
 type EnvelopeBudgetMonthMenuModalProps = Extract<
   ModalType,
@@ -36,6 +38,7 @@ export function EnvelopeBudgetMonthMenuModal({
   const locale = useLocale();
   const originalNotes = useNotes(`budget-${month}`);
   const { showUndoNotification } = useUndo();
+  const dispatch = useDispatch();
 
   const _onEditNotes = () => {
     onEditNotes?.(month);
@@ -191,6 +194,14 @@ export function EnvelopeBudgetMonthMenuModal({
                 onCheckTemplates={() => {
                   onBudgetAction(month, 'check-templates');
                   state.close();
+                }}
+                onPreviewTemplates={() => {
+                  state.close();
+                  dispatch(
+                    pushModal({
+                      modal: { name: 'template-preview', options: { month } },
+                    }),
+                  );
                 }}
                 onApplyBudgetTemplates={() => {
                   onBudgetAction(month, 'apply-goal-template');
