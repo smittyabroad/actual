@@ -100,7 +100,10 @@ async function updateAccount({
   account_group_id,
 }: Pick<AccountEntity, 'id'> &
   Partial<
-    Pick<AccountEntity, 'name' | 'last_reconciled' | 'type' | 'account_group_id'>
+    Pick<
+      AccountEntity,
+      'name' | 'last_reconciled' | 'type' | 'account_group_id'
+    >
   >) {
   await db.update('accounts', {
     id,
@@ -1285,7 +1288,7 @@ async function createGoCardlessWebToken({
   }
 }
 
-type SyncResponse = {
+export type SyncResponse = {
   newTransactions: Array<TransactionEntity['id']>;
   matchedTransactions: Array<TransactionEntity['id']>;
   updatedAccounts: Array<AccountEntity['id']>;
